@@ -28,6 +28,8 @@ const Index = () => {
     addBookmark,
     removeBookmark,
     setPlaybackSpeed,
+    deleteBook,
+    updateBookCover,
   } = useLibrary();
 
   const {
@@ -178,6 +180,8 @@ const Index = () => {
         onFilterChange={setFilterBy}
         stats={stats}
         onPlayBook={handlePlayBook}
+        onDeleteBook={deleteBook}
+        onChangeCover={updateBookCover}
       />
 
       {/* Upload Dialog */}

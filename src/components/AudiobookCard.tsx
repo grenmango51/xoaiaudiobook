@@ -5,15 +5,18 @@ import { formatDuration, formatProgress } from '@/utils/formatTime';
 import { Play, MoreVertical } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
+import { BookOptionsMenu } from './BookOptionsMenu';
 
 interface AudiobookCardProps {
   book: Audiobook;
   onPlay: (book: Audiobook) => void;
+  onDelete: (bookId: string) => void;
+  onChangeCover: (bookId: string, coverUrl: string) => void;
   onStatusChange?: (bookId: string, status: Audiobook['status']) => void;
   className?: string;
 }
 
-export function AudiobookCard({ book, onPlay, className }: AudiobookCardProps) {
+export function AudiobookCard({ book, onPlay, onDelete, onChangeCover, className }: AudiobookCardProps) {
   const progress = formatProgress(book.currentPosition, book.duration);
   const remainingTime = book.duration - book.currentPosition;
 
@@ -57,14 +60,20 @@ export function AudiobookCard({ book, onPlay, className }: AudiobookCardProps) {
         </div>
 
         {/* More Options */}
-        <Button
-          variant="ghost"
-          size="iconSm"
-          className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 bg-background/50 backdrop-blur-sm"
-          onClick={(e) => e.stopPropagation()}
+        <BookOptionsMenu
+          book={book}
+          onDelete={onDelete}
+          onChangeCover={onChangeCover}
         >
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="iconSm"
+            className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 bg-background/50 backdrop-blur-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </BookOptionsMenu>
       </div>
 
       {/* Book Info */}

@@ -21,6 +21,8 @@ interface LibraryProps {
     finished: number;
   };
   onPlayBook: (book: Audiobook) => void;
+  onDeleteBook: (bookId: string) => void;
+  onChangeCover: (bookId: string, coverUrl: string) => void;
 }
 
 export function Library({
@@ -33,6 +35,8 @@ export function Library({
   onFilterChange,
   stats,
   onPlayBook,
+  onDeleteBook,
+  onChangeCover,
 }: LibraryProps) {
   return (
     <div className="flex-1 container mx-auto px-4 py-6">
@@ -73,7 +77,12 @@ export function Library({
               className="animate-fade-in"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <AudiobookCard book={book} onPlay={onPlayBook} />
+              <AudiobookCard 
+                book={book} 
+                onPlay={onPlayBook} 
+                onDelete={onDeleteBook}
+                onChangeCover={onChangeCover}
+              />
             </div>
           ))}
         </div>
