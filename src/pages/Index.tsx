@@ -3,9 +3,11 @@ import { Header } from '@/components/Header';
 import { Library } from '@/components/Library';
 import { NowPlaying } from '@/components/NowPlaying';
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { UploadDialog } from '@/components/UploadDialog';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { Audiobook } from '@/types/audiobook';
+import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const {
@@ -18,6 +20,7 @@ const Index = () => {
     setSortBy,
     filterBy,
     setFilterBy,
+    addBooks,
     stats,
     updateBookProgress,
     addBookmark,
@@ -35,6 +38,7 @@ const Index = () => {
     setSleepTimer,
   } = useAudioPlayer();
 
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [simulatedTime, setSimulatedTime] = useState(0);
 
@@ -117,9 +121,17 @@ const Index = () => {
     }
   }, [currentBook, removeBookmark]);
 
+  const handleUploadFiles = useCallback(async (files: File[]) => {
+    await addBooks(files);
+    toast({
+      title: 'Books added!',
+      description: `Successfully added ${files.length} audiobook${files.length !== 1 ? 's' : ''} to your library.`,
+    });
+  }, [addBooks]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+      <Header onUpload={() => setIsUploadOpen(true)} />
       
       <Library
         books={books}
@@ -131,6 +143,13 @@ const Index = () => {
         onFilterChange={setFilterBy}
         stats={stats}
         onPlayBook={handlePlayBook}
+      />
+
+      {/* Upload Dialog */}
+      <UploadDialog
+        open={isUploadOpen}
+        onOpenChange={setIsUploadOpen}
+        onUpload={handleUploadFiles}
       />
 
       {/* Mini Player */}
