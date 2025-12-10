@@ -1,11 +1,14 @@
-import { Headphones, Settings, Upload } from 'lucide-react';
+import { Headphones, Settings, Upload, Download } from 'lucide-react';
 import { Button } from './ui/button';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 interface HeaderProps {
   onUpload: () => void;
 }
 
 export function Header({ onUpload }: HeaderProps) {
+  const { isInstallable, installApp } = usePWAInstall();
+
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="container mx-auto px-4 py-4">
@@ -25,6 +28,17 @@ export function Header({ onUpload }: HeaderProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {isInstallable && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={installApp}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Install App</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
