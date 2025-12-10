@@ -2,7 +2,7 @@ import { Headphones, Settings, Upload } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface HeaderProps {
-  onUpload?: () => void;
+  onUpload: () => void;
 }
 
 export function Header({ onUpload }: HeaderProps) {

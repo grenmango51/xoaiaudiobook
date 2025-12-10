@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Audiobook, BookStatus, Bookmark } from '@/types/audiobook';
 import { sampleBooks } from '@/data/sampleBooks';
+import { createAudiobookFromFile } from '@/utils/audioUtils';
 
 export type SortOption = 'title' | 'author' | 'dateAdded' | 'duration' | 'dateFinished' | 'recentlyPlayed';
 export type FilterOption = 'all' | 'new' | 'started' | 'finished';
@@ -23,6 +24,11 @@ export function useLibrary() {
       }
       return book;
     }));
+  }, []);
+
+  const addBooks = useCallback(async (files: File[]) => {
+    const newBooks = await Promise.all(files.map(createAudiobookFromFile));
+    setBooks(prev => [...newBooks, ...prev]);
   }, []);
 
   const updateBookProgress = useCallback((bookId: string, position: number) => {
@@ -146,6 +152,7 @@ export function useLibrary() {
     setSortBy,
     filterBy,
     setFilterBy,
+    addBooks,
     updateBookStatus,
     updateBookProgress,
     addBookmark,
