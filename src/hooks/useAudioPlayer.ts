@@ -53,14 +53,14 @@ export function useAudioPlayer() {
     setupAudioListeners(audioElement);
   }, [setupAudioListeners]);
 
-  const loadAudio = useCallback((url: string, startTime: number = 0) => {
+  const loadAudio = useCallback((url: string, startTime: number = 0, playbackSpeed: number = 1) => {
     if (audioRef.current) {
       audioRef.current.src = url;
       audioRef.current.currentTime = startTime;
-      audioRef.current.playbackRate = playerState.playbackSpeed;
+      audioRef.current.playbackRate = playbackSpeed;
       audioRef.current.load();
     }
-  }, [playerState.playbackSpeed]);
+  }, []);
 
   const play = useCallback(async () => {
     if (audioRef.current) {
@@ -106,10 +106,10 @@ export function useAudioPlayer() {
   }, []);
 
   const setPlaybackSpeed = useCallback((speed: number) => {
+    setPlayerState(prev => ({ ...prev, playbackSpeed: speed }));
     if (audioRef.current) {
       audioRef.current.playbackRate = speed;
     }
-    setPlayerState(prev => ({ ...prev, playbackSpeed: speed }));
   }, []);
 
   const setVolume = useCallback((volume: number) => {

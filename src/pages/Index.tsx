@@ -71,10 +71,10 @@ const Index = () => {
       if (storedAudio) {
         const url = createAudioUrl(storedAudio);
         currentAudioUrlRef.current = url;
-        loadAudio(url, currentBook.currentPosition);
+        loadAudio(url, currentBook.currentPosition, currentBook.playbackSpeed);
       } else if (currentBook.audioUrl) {
         // Fallback to audioUrl (for freshly uploaded files before page reload)
-        loadAudio(currentBook.audioUrl, currentBook.currentPosition);
+        loadAudio(currentBook.audioUrl, currentBook.currentPosition, currentBook.playbackSpeed);
       } else {
         // Sample book without audio
         toast({
