@@ -5,6 +5,18 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+// Store the event globally in case it fires before React mounts
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+
+// Set up global listener immediately
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    globalDeferredPrompt = e as BeforeInstallPromptEvent;
+    console.log('PWA: beforeinstallprompt event captured globally');
+  });
+}
+
 function detectIOS(): boolean {
   const userAgent = window.navigator.userAgent.toLowerCase();
   return /iphone|ipad|ipod/.test(userAgent) || 
@@ -17,8 +29,8 @@ function isInStandaloneMode(): boolean {
 }
 
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(globalDeferredPrompt);
+  const [isInstallable, setIsInstallable] = useState(!!globalDeferredPrompt);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
@@ -38,16 +50,26 @@ export function usePWAInstall() {
       return;
     }
 
+    // Check if we already have a deferred prompt from global capture
+    if (globalDeferredPrompt) {
+      setDeferredPrompt(globalDeferredPrompt);
+      setIsInstallable(true);
+    }
+
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const prompt = e as BeforeInstallPromptEvent;
+      globalDeferredPrompt = prompt;
+      setDeferredPrompt(prompt);
       setIsInstallable(true);
+      console.log('PWA: beforeinstallprompt event captured in hook');
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
+      globalDeferredPrompt = null;
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
