@@ -155,6 +155,24 @@ const Index = () => {
     }
   }, [currentBook, removeBookmark]);
 
+  const handleDeleteBook = useCallback(async (bookId: string) => {
+    // If deleting the currently playing book, stop and clear it
+    if (currentBook?.id === bookId) {
+      // Revoke audio URL
+      if (currentAudioUrlRef.current) {
+        revokeAudioUrl(currentAudioUrlRef.current);
+        currentAudioUrlRef.current = null;
+      }
+      setCurrentBook(null);
+      setIsPlayerExpanded(false);
+    }
+    await deleteBook(bookId);
+    toast({
+      title: 'Book deleted',
+      description: 'The audiobook has been removed from your library.',
+    });
+  }, [currentBook?.id, deleteBook, setCurrentBook]);
+
   const handleUploadFiles = useCallback(async (files: File[]) => {
     await addBooks(files);
     toast({
@@ -180,7 +198,7 @@ const Index = () => {
         onFilterChange={setFilterBy}
         stats={stats}
         onPlayBook={handlePlayBook}
-        onDeleteBook={deleteBook}
+        onDeleteBook={handleDeleteBook}
         onChangeCover={updateBookCover}
       />
 
