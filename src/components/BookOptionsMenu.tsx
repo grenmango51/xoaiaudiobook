@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Trash2, Image, Link, Upload } from 'lucide-react';
+import { Trash2, Image, Upload, Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,13 +11,6 @@ import {
   DropdownMenuSubTrigger,
 } from './ui/dropdown-menu';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from './ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -27,9 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Audiobook } from '@/types/audiobook';
 
 interface BookOptionsMenuProps {
@@ -46,8 +36,6 @@ export function BookOptionsMenu({
   children,
 }: BookOptionsMenuProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showUrlDialog, setShowUrlDialog] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,13 +54,6 @@ export function BookOptionsMenu({
     }
   };
 
-  const handleUrlSubmit = () => {
-    if (imageUrl.trim()) {
-      onChangeCover(book.id, imageUrl.trim());
-      setImageUrl('');
-      setShowUrlDialog(false);
-    }
-  };
 
   const handleDelete = () => {
     onDelete(book.id);
@@ -91,14 +72,19 @@ export function BookOptionsMenu({
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               <DropdownMenuItem
+                onClick={() => {
+                  const query = encodeURIComponent(`${book.title} ${book.author} audiobook cover`);
+                  window.open(`https://www.google.com/search?tbm=isch&q=${query}`, '_blank');
+                }}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Search on Google
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload from Device
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowUrlDialog(true)}>
-                <Link className="mr-2 h-4 w-4" />
-                Paste Image URL
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
@@ -124,49 +110,6 @@ export function BookOptionsMenu({
         onChange={handleFileUpload}
       />
 
-      {/* URL Dialog */}
-      <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Paste Image URL</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="image-url">Image URL</Label>
-              <Input
-                id="image-url"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
-              />
-              <p className="text-xs text-muted-foreground">
-                Tip: Search for book covers on Google Images and copy the image address
-              </p>
-            </div>
-            {imageUrl && (
-              <div className="relative aspect-square w-24 overflow-hidden rounded-lg border border-border">
-                <img
-                  src={imageUrl}
-                  alt="Preview"
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUrlDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUrlSubmit} disabled={!imageUrl.trim()}>
-              Apply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
