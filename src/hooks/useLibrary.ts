@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Audiobook, BookStatus, Bookmark } from '@/types/audiobook';
 import { sampleBooks } from '@/data/sampleBooks';
 import { createAudiobookFromFile } from '@/utils/audioUtils';
+import { deleteAudioFile } from '@/utils/audioStorage';
 
 export type SortOption = 'title' | 'author' | 'dateAdded' | 'duration' | 'dateFinished' | 'recentlyPlayed';
 export type FilterOption = 'all' | 'new' | 'started' | 'finished';
@@ -89,6 +90,26 @@ export function useLibrary() {
     }));
   }, []);
 
+  const deleteBook = useCallback(async (bookId: string) => {
+    // Delete audio file from IndexedDB
+    try {
+      await deleteAudioFile(bookId);
+    } catch (error) {
+      console.error('Failed to delete audio file:', error);
+    }
+    // Remove from state
+    setBooks(prev => prev.filter(book => book.id !== bookId));
+  }, []);
+
+  const updateBookCover = useCallback((bookId: string, coverUrl: string) => {
+    setBooks(prev => prev.map(book => {
+      if (book.id === bookId) {
+        return { ...book, coverUrl };
+      }
+      return book;
+    }));
+  }, []);
+
   const filteredAndSortedBooks = useMemo(() => {
     let result = [...books];
 
@@ -158,6 +179,8 @@ export function useLibrary() {
     addBookmark,
     removeBookmark,
     setPlaybackSpeed,
+    deleteBook,
+    updateBookCover,
     stats,
   };
 }
