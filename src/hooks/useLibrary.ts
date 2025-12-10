@@ -1,18 +1,37 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Audiobook, BookStatus, Bookmark } from '@/types/audiobook';
 import { sampleBooks } from '@/data/sampleBooks';
 import { createAudiobookFromFile } from '@/utils/audioUtils';
 import { deleteAudioFile } from '@/utils/audioStorage';
+import { saveLibrary, loadLibrary, isFirstInstall, markInitialized } from '@/utils/libraryStorage';
 
 export type SortOption = 'title' | 'author' | 'dateAdded' | 'duration' | 'dateFinished' | 'recentlyPlayed';
 export type FilterOption = 'all' | 'new' | 'started' | 'finished';
 
+function getInitialBooks(): Audiobook[] {
+  const saved = loadLibrary();
+  if (saved) return saved;
+  
+  // First install: show sample books
+  if (isFirstInstall()) {
+    markInitialized();
+    return sampleBooks;
+  }
+  
+  return [];
+}
+
 export function useLibrary() {
-  const [books, setBooks] = useState<Audiobook[]>(sampleBooks);
+  const [books, setBooks] = useState<Audiobook[]>(getInitialBooks);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recentlyPlayed');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [currentBook, setCurrentBook] = useState<Audiobook | null>(null);
+
+  // Save to localStorage whenever books change
+  useEffect(() => {
+    saveLibrary(books);
+  }, [books]);
 
   const updateBookStatus = useCallback((bookId: string, status: BookStatus) => {
     setBooks(prev => prev.map(book => {
