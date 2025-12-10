@@ -1,13 +1,24 @@
+import { useState } from 'react';
 import { Headphones, Settings, Upload, Download } from 'lucide-react';
 import { Button } from './ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { IOSInstallGuide } from './IOSInstallGuide';
 
 interface HeaderProps {
   onUpload: () => void;
 }
 
 export function Header({ onUpload }: HeaderProps) {
-  const { isInstallable, installApp } = usePWAInstall();
+  const { isInstallable, isIOS, installApp } = usePWAInstall();
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  const handleInstallClick = () => {
+    if (isIOS) {
+      setShowIOSGuide(true);
+    } else {
+      installApp();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50">
@@ -32,13 +43,14 @@ export function Header({ onUpload }: HeaderProps) {
               <Button
                 variant="default"
                 size="sm"
-                onClick={installApp}
+                onClick={handleInstallClick}
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Install App</span>
               </Button>
             )}
+            <IOSInstallGuide open={showIOSGuide} onOpenChange={setShowIOSGuide} />
             <Button
               variant="outline"
               size="sm"
