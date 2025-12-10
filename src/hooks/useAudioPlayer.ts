@@ -15,21 +15,72 @@ export function useAudioPlayer() {
 
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const play = useCallback(() => {
-    audioRef.current?.play();
-    setPlayerState(prev => ({ ...prev, isPlaying: true }));
+  // Setup audio element event listeners
+  const setupAudioListeners = useCallback((audio: HTMLAudioElement) => {
+    audio.ontimeupdate = () => {
+      setPlayerState(prev => ({ ...prev, currentTime: audio.currentTime }));
+    };
+
+    audio.onloadedmetadata = () => {
+      setPlayerState(prev => ({ 
+        ...prev, 
+        duration: audio.duration,
+        currentTime: audio.currentTime 
+      }));
+    };
+
+    audio.onended = () => {
+      setPlayerState(prev => ({ ...prev, isPlaying: false }));
+    };
+
+    audio.onplay = () => {
+      setPlayerState(prev => ({ ...prev, isPlaying: true }));
+    };
+
+    audio.onpause = () => {
+      setPlayerState(prev => ({ ...prev, isPlaying: false }));
+    };
+
+    audio.onerror = (e) => {
+      console.error('Audio error:', e);
+      setPlayerState(prev => ({ ...prev, isPlaying: false }));
+    };
+  }, []);
+
+  // Initialize audio element
+  const initAudio = useCallback((audioElement: HTMLAudioElement) => {
+    audioRef.current = audioElement;
+    setupAudioListeners(audioElement);
+  }, [setupAudioListeners]);
+
+  const loadAudio = useCallback((url: string, startTime: number = 0) => {
+    if (audioRef.current) {
+      audioRef.current.src = url;
+      audioRef.current.currentTime = startTime;
+      audioRef.current.playbackRate = playerState.playbackSpeed;
+      audioRef.current.load();
+    }
+  }, [playerState.playbackSpeed]);
+
+  const play = useCallback(async () => {
+    if (audioRef.current) {
+      try {
+        await audioRef.current.play();
+      } catch (error) {
+        console.error('Failed to play:', error);
+      }
+    }
   }, []);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
-    setPlayerState(prev => ({ ...prev, isPlaying: false }));
   }, []);
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = useCallback(async () => {
     if (playerState.isPlaying) {
       pause();
     } else {
-      play();
+      await play();
     }
   }, [playerState.isPlaying, play, pause]);
 
@@ -42,9 +93,8 @@ export function useAudioPlayer() {
 
   const skipForward = useCallback((seconds: number = 15) => {
     if (audioRef.current) {
-      const newTime = Math.min(audioRef.current.currentTime + seconds, audioRef.current.duration);
+      const newTime = Math.min(audioRef.current.currentTime + seconds, audioRef.current.duration || 0);
       audioRef.current.currentTime = newTime;
-      setPlayerState(prev => ({ ...prev, currentTime: newTime }));
     }
   }, []);
 
@@ -52,7 +102,6 @@ export function useAudioPlayer() {
     if (audioRef.current) {
       const newTime = Math.max(audioRef.current.currentTime - seconds, 0);
       audioRef.current.currentTime = newTime;
-      setPlayerState(prev => ({ ...prev, currentTime: newTime }));
     }
   }, []);
 
@@ -98,11 +147,15 @@ export function useAudioPlayer() {
           }
           return { ...prev, sleepTimer: prev.sleepTimer - 1 };
         });
-      }, 60000); // Update every minute
+      }, 60000);
     } else {
       setPlayerState(prev => ({ ...prev, sleepTimer: null }));
     }
   }, [pause]);
+
+  const getCurrentTime = useCallback(() => {
+    return audioRef.current?.currentTime || 0;
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -116,6 +169,8 @@ export function useAudioPlayer() {
     audioRef,
     playerState,
     setPlayerState,
+    initAudio,
+    loadAudio,
     play,
     pause,
     togglePlay,
@@ -126,5 +181,6 @@ export function useAudioPlayer() {
     setVolume,
     toggleMute,
     setSleepTimer,
+    getCurrentTime,
   };
 }

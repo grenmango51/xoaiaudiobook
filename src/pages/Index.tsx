@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/Header';
 import { Library } from '@/components/Library';
 import { NowPlaying } from '@/components/NowPlaying';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { UploadDialog } from '@/components/UploadDialog';
+import { AudioElement } from '@/components/AudioElement';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { Audiobook } from '@/types/audiobook';
 import { toast } from '@/hooks/use-toast';
+import { getAudioFile, createAudioUrl, revokeAudioUrl } from '@/utils/audioStorage';
 
 const Index = () => {
   const {
@@ -30,71 +32,100 @@ const Index = () => {
 
   const {
     playerState,
+    initAudio,
+    loadAudio,
     togglePlay,
     seek,
     skipForward,
     skipBackward,
     setPlaybackSpeed: setPlayerSpeed,
     setSleepTimer,
+    getCurrentTime,
   } = useAudioPlayer();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
-  const [simulatedTime, setSimulatedTime] = useState(0);
+  const [audioReady, setAudioReady] = useState(false);
+  const currentAudioUrlRef = useRef<string | null>(null);
 
-  // Simulate playback progress
+  // Handle audio element initialization
+  const handleAudioInit = useCallback((audio: HTMLAudioElement) => {
+    initAudio(audio);
+    setAudioReady(true);
+  }, [initAudio]);
+
+  // Load audio when book changes
   useEffect(() => {
-    if (!currentBook) return;
-    setSimulatedTime(currentBook.currentPosition);
-  }, [currentBook?.id]);
+    if (!currentBook || !audioReady) return;
 
-  useEffect(() => {
-    if (!playerState.isPlaying || !currentBook) return;
+    const loadBookAudio = async () => {
+      // Revoke previous URL if exists
+      if (currentAudioUrlRef.current) {
+        revokeAudioUrl(currentAudioUrlRef.current);
+        currentAudioUrlRef.current = null;
+      }
 
-    const interval = setInterval(() => {
-      setSimulatedTime((prev) => {
-        const newTime = prev + playerState.playbackSpeed;
-        if (newTime >= currentBook.duration) {
-          togglePlay();
-          return currentBook.duration;
-        }
-        return newTime;
-      });
-    }, 1000);
+      // Try to get audio from IndexedDB first
+      const storedAudio = await getAudioFile(currentBook.id);
+      
+      if (storedAudio) {
+        const url = createAudioUrl(storedAudio);
+        currentAudioUrlRef.current = url;
+        loadAudio(url, currentBook.currentPosition);
+      } else if (currentBook.audioUrl) {
+        // Fallback to audioUrl (for freshly uploaded files before page reload)
+        loadAudio(currentBook.audioUrl, currentBook.currentPosition);
+      } else {
+        // Sample book without audio
+        toast({
+          title: "No audio file",
+          description: "This is a sample book. Upload your own audiobooks to listen!",
+          variant: "destructive",
+        });
+      }
+    };
 
-    return () => clearInterval(interval);
-  }, [playerState.isPlaying, playerState.playbackSpeed, currentBook, togglePlay]);
+    loadBookAudio();
+  }, [currentBook?.id, audioReady, loadAudio]);
 
   // Save progress periodically
   useEffect(() => {
     if (!currentBook) return;
     
     const saveInterval = setInterval(() => {
-      updateBookProgress(currentBook.id, simulatedTime);
+      const currentTime = getCurrentTime();
+      if (currentTime > 0) {
+        updateBookProgress(currentBook.id, currentTime);
+      }
     }, 5000);
 
     return () => clearInterval(saveInterval);
-  }, [currentBook, simulatedTime, updateBookProgress]);
+  }, [currentBook, getCurrentTime, updateBookProgress]);
+
+  // Cleanup audio URL on unmount
+  useEffect(() => {
+    return () => {
+      if (currentAudioUrlRef.current) {
+        revokeAudioUrl(currentAudioUrlRef.current);
+      }
+    };
+  }, []);
 
   const handlePlayBook = useCallback((book: Audiobook) => {
     setCurrentBook(book);
-    setSimulatedTime(book.currentPosition);
     setPlayerSpeed(book.playbackSpeed);
     setIsPlayerExpanded(true);
   }, [setCurrentBook, setPlayerSpeed]);
 
   const handleSeek = useCallback((time: number) => {
-    setSimulatedTime(time);
     seek(time);
   }, [seek]);
 
   const handleSkipForward = useCallback(() => {
-    setSimulatedTime((prev) => Math.min(prev + 15, currentBook?.duration || 0));
     skipForward(15);
-  }, [skipForward, currentBook]);
+  }, [skipForward]);
 
   const handleSkipBackward = useCallback(() => {
-    setSimulatedTime((prev) => Math.max(prev - 15, 0));
     skipBackward(15);
   }, [skipBackward]);
 
@@ -107,9 +138,10 @@ const Index = () => {
 
   const handleAddBookmark = useCallback((note: string) => {
     if (currentBook) {
-      addBookmark(currentBook.id, { position: simulatedTime, note });
+      const currentTime = getCurrentTime();
+      addBookmark(currentBook.id, { position: currentTime, note });
     }
-  }, [currentBook, simulatedTime, addBookmark]);
+  }, [currentBook, getCurrentTime, addBookmark]);
 
   const handleGoToBookmark = useCallback((position: number) => {
     handleSeek(position);
@@ -131,6 +163,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Hidden audio element for playback */}
+      <AudioElement onInit={handleAudioInit} />
+
       <Header onUpload={() => setIsUploadOpen(true)} />
       
       <Library
@@ -157,7 +192,7 @@ const Index = () => {
         <MiniPlayer
           book={currentBook}
           isPlaying={playerState.isPlaying}
-          currentTime={simulatedTime}
+          currentTime={playerState.currentTime}
           onTogglePlay={togglePlay}
           onSkipForward={handleSkipForward}
           onExpand={() => setIsPlayerExpanded(true)}
@@ -169,7 +204,7 @@ const Index = () => {
         <NowPlaying
           book={currentBook}
           isPlaying={playerState.isPlaying}
-          currentTime={simulatedTime}
+          currentTime={playerState.currentTime}
           playbackSpeed={playerState.playbackSpeed}
           sleepTimer={playerState.sleepTimer}
           onTogglePlay={togglePlay}

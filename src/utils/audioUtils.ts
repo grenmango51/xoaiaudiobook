@@ -1,4 +1,5 @@
 import { Audiobook } from '@/types/audiobook';
+import { storeAudioFile } from './audioStorage';
 
 // Extract audio duration from a file
 export async function getAudioDuration(file: File): Promise<number> {
@@ -77,10 +78,16 @@ export function generateCoverUrl(title: string): string {
 export async function createAudiobookFromFile(file: File): Promise<Audiobook> {
   const duration = await getAudioDuration(file);
   const { title, author } = parseFileName(file.name);
+  const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Store the audio file in IndexedDB for persistent offline access
+  await storeAudioFile(id, file);
+  
+  // Also create a temporary blob URL for immediate playback
   const audioUrl = URL.createObjectURL(file);
   
   return {
-    id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id,
     title,
     author,
     coverUrl: generateCoverUrl(title),
