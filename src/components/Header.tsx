@@ -3,20 +3,39 @@ import { Headphones, Settings, Upload, Download } from 'lucide-react';
 import { Button } from './ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { IOSInstallGuide } from './IOSInstallGuide';
+import { AndroidInstallGuide } from './AndroidInstallGuide';
+import { toast } from 'sonner';
 
 interface HeaderProps {
   onUpload: () => void;
 }
 
 export function Header({ onUpload }: HeaderProps) {
-  const { isInstallable, isIOS, installApp } = usePWAInstall();
+  const { isInstallable, isIOS, isAndroid, promptAvailable, installApp } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showAndroidGuide, setShowAndroidGuide] = useState(false);
 
-  const handleInstallClick = () => {
+  const handleInstallClick = async () => {
     if (isIOS) {
       setShowIOSGuide(true);
-    } else {
-      installApp();
+      return;
+    }
+
+    if (isAndroid && promptAvailable) {
+      const result = await installApp();
+      if (result === 'accepted') {
+        toast.success('App installed! Find it on your home screen.');
+      } else if (result === 'dismissed') {
+        toast.info('Installation cancelled. Tap Install App to try again.');
+        // Show manual instructions since prompt won't be available again
+        setShowAndroidGuide(true);
+      } else {
+        // Prompt not available, show manual instructions
+        setShowAndroidGuide(true);
+      }
+    } else if (isAndroid) {
+      // No automatic prompt available, show manual instructions
+      setShowAndroidGuide(true);
     }
   };
 
@@ -51,6 +70,7 @@ export function Header({ onUpload }: HeaderProps) {
               </Button>
             )}
             <IOSInstallGuide open={showIOSGuide} onOpenChange={setShowIOSGuide} />
+            <AndroidInstallGuide open={showAndroidGuide} onOpenChange={setShowAndroidGuide} />
             <Button
               variant="outline"
               size="sm"
