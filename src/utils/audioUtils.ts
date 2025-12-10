@@ -6,18 +6,34 @@ export async function getAudioDuration(file: File): Promise<number> {
   return new Promise((resolve) => {
     const audio = new Audio();
     audio.preload = 'metadata';
+    const blobUrl = URL.createObjectURL(file);
+    
+    // 5-second timeout for mobile browsers that may hang
+    const timeout = setTimeout(() => {
+      console.warn('Audio metadata loading timed out, using default duration');
+      cleanup();
+      resolve(3600); // Default to 1 hour
+    }, 5000);
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      audio.onloadedmetadata = null;
+      audio.onerror = null;
+      URL.revokeObjectURL(blobUrl);
+    };
     
     audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(audio.src);
-      resolve(Math.floor(audio.duration));
+      cleanup();
+      resolve(Math.floor(audio.duration) || 3600);
     };
 
     audio.onerror = () => {
-      URL.revokeObjectURL(audio.src);
+      console.warn('Audio metadata loading error, using default duration');
+      cleanup();
       resolve(3600); // Default to 1 hour if can't read duration
     };
 
-    audio.src = URL.createObjectURL(file);
+    audio.src = blobUrl;
   });
 }
 
@@ -81,7 +97,12 @@ export async function createAudiobookFromFile(file: File): Promise<Audiobook> {
   const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
   // Store the audio file in IndexedDB for persistent offline access
-  await storeAudioFile(id, file);
+  try {
+    await storeAudioFile(id, file);
+  } catch (error) {
+    console.error('Failed to store audio in IndexedDB:', error);
+    // Continue anyway - blob URL will work for this session
+  }
   
   // Also create a temporary blob URL for immediate playback
   const audioUrl = URL.createObjectURL(file);

@@ -174,11 +174,40 @@ const Index = () => {
   }, [currentBook?.id, deleteBook, setCurrentBook]);
 
   const handleUploadFiles = useCallback(async (files: File[]) => {
-    await addBooks(files);
     toast({
-      title: 'Books added!',
-      description: `Successfully added ${files.length} audiobook${files.length !== 1 ? 's' : ''} to your library.`,
+      title: 'Processing...',
+      description: `Adding ${files.length} file${files.length !== 1 ? 's' : ''} to your library.`,
     });
+    
+    try {
+      const result = await addBooks(files);
+      
+      if (result.failed === 0) {
+        toast({
+          title: 'Books added!',
+          description: `Successfully added ${result.success} audiobook${result.success !== 1 ? 's' : ''} to your library.`,
+        });
+      } else if (result.success > 0) {
+        toast({
+          title: 'Partial success',
+          description: `Added ${result.success} book${result.success !== 1 ? 's' : ''}, but ${result.failed} failed.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Upload failed',
+          description: 'Could not process the audio files. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: 'An error occurred while adding books. Please try again.',
+        variant: 'destructive',
+      });
+    }
   }, [addBooks]);
 
   return (

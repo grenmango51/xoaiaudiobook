@@ -46,9 +46,26 @@ export function useLibrary() {
     }));
   }, []);
 
-  const addBooks = useCallback(async (files: File[]) => {
-    const newBooks = await Promise.all(files.map(createAudiobookFromFile));
-    setBooks(prev => [...newBooks, ...prev]);
+  const addBooks = useCallback(async (files: File[]): Promise<{ success: number; failed: number }> => {
+    const newBooks: Audiobook[] = [];
+    let failed = 0;
+    
+    // Process files one by one to avoid single failure breaking everything
+    for (const file of files) {
+      try {
+        const book = await createAudiobookFromFile(file);
+        newBooks.push(book);
+      } catch (error) {
+        console.error('Failed to process file:', file.name, error);
+        failed++;
+      }
+    }
+    
+    if (newBooks.length > 0) {
+      setBooks(prev => [...newBooks, ...prev]);
+    }
+    
+    return { success: newBooks.length, failed };
   }, []);
 
   const updateBookProgress = useCallback((bookId: string, position: number) => {
