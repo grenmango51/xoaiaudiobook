@@ -123,3 +123,60 @@ export async function createAudiobookFromFile(file: File): Promise<Audiobook> {
     audioUrl,
   };
 }
+
+// Create an audiobook from a folder (multiple files = chapters)
+// Similar to Smart Audiobook Player approach
+export async function createAudiobookFromFolder(folderName: string, files: File[]): Promise<Audiobook> {
+  const id = `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Calculate total duration and create chapters
+  let totalDuration = 0;
+  const chapters: { id: string; title: string; startTime: number; endTime: number }[] = [];
+  
+  // Process files to get durations (with timeout protection)
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const chapterDuration = await getAudioDuration(file);
+    const startTime = totalDuration;
+    totalDuration += chapterDuration;
+    
+    chapters.push({
+      id: `ch-${i + 1}`,
+      title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+      startTime,
+      endTime: totalDuration,
+    });
+  }
+  
+  // Store all audio files - combine into single blob for simpler playback
+  // For now, store the first file and create a combined audioUrl
+  const firstFile = files[0];
+  try {
+    await storeAudioFile(id, firstFile);
+  } catch (error) {
+    console.error('Failed to store audio in IndexedDB:', error);
+  }
+  
+  // Create blob URL from first file for immediate playback
+  // TODO: Implement proper multi-file chapter support
+  const audioUrl = URL.createObjectURL(firstFile);
+  
+  // Parse folder name for title/author
+  const { title, author } = parseFileName(folderName);
+  
+  return {
+    id,
+    title: title || folderName,
+    author,
+    coverUrl: generateCoverUrl(folderName),
+    description: `${files.length} file${files.length !== 1 ? 's' : ''} from folder: ${folderName}`,
+    duration: totalDuration,
+    currentPosition: 0,
+    status: 'new',
+    dateAdded: new Date(),
+    chapters,
+    bookmarks: [],
+    playbackSpeed: 1.0,
+    audioUrl,
+  };
+}
