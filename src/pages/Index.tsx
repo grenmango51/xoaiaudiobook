@@ -4,12 +4,14 @@ import { Library } from '@/components/Library';
 import { NowPlaying } from '@/components/NowPlaying';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { UploadDialog } from '@/components/UploadDialog';
+import { FolderAccessDialog } from '@/components/FolderAccessDialog';
 import { AudioElement } from '@/components/AudioElement';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { Audiobook } from '@/types/audiobook';
 import { toast } from '@/hooks/use-toast';
 import { getAudioFile, createAudioUrl, revokeAudioUrl } from '@/utils/audioStorage';
+import { createPlaybackUrl } from '@/utils/fileHandleStorage';
 import type { ScannedBook } from '@/utils/folderScanner';
 
 const Index = () => {
@@ -24,6 +26,7 @@ const Index = () => {
     filterBy,
     setFilterBy,
     addBooks,
+    addPrebuiltBooks,
     addBooksFromFolders,
     stats,
     updateBookProgress,
@@ -48,14 +51,14 @@ const Index = () => {
   } = useAudioPlayer();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isFolderAccessOpen, setIsFolderAccessOpen] = useState(false);
   const [uploadTab, setUploadTab] = useState<'folder' | 'files'>('folder');
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const currentAudioUrlRef = useRef<string | null>(null);
 
   const handleOpenScanFolder = useCallback(() => {
-    setUploadTab('folder');
-    setIsUploadOpen(true);
+    setIsFolderAccessOpen(true);
   }, []);
 
   const handleOpenUploadFiles = useCallback(() => {
@@ -80,7 +83,29 @@ const Index = () => {
         currentAudioUrlRef.current = null;
       }
 
-      // Try to get audio from IndexedDB first
+      // First try file handle storage (lightweight, no copying)
+      if (currentBook.id.startsWith('handle-')) {
+        try {
+          const url = await createPlaybackUrl(currentBook.id, 0);
+          if (url) {
+            currentAudioUrlRef.current = url;
+            loadAudio(url, currentBook.currentPosition, currentBook.playbackSpeed);
+            return;
+          } else {
+            // Permission might need re-granting
+            toast({
+              title: "Permission needed",
+              description: "Please re-select your audiobook folder to restore access.",
+              variant: "destructive",
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('File handle access error:', error);
+        }
+      }
+
+      // Try to get audio from IndexedDB (for uploaded files)
       const storedAudio = await getAudioFile(currentBook.id);
       
       if (storedAudio) {
@@ -247,6 +272,17 @@ const Index = () => {
     }
   }, [addBooksFromFolders]);
 
+  // Handle books added from FolderAccessDialog (file handles approach)
+  const handleBooksAdded = useCallback((newBooks: Audiobook[]) => {
+    // Add books directly to library (they already have IDs and metadata)
+    addPrebuiltBooks(newBooks);
+    
+    toast({
+      title: 'Audiobooks linked!',
+      description: `Added ${newBooks.length} audiobook${newBooks.length !== 1 ? 's' : ''} to your library.`,
+    });
+  }, [addPrebuiltBooks]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Hidden audio element for playback */}
@@ -268,7 +304,14 @@ const Index = () => {
         onChangeCover={updateBookCover}
       />
 
-      {/* Upload Dialog */}
+      {/* Folder Access Dialog (lightweight file handles) */}
+      <FolderAccessDialog
+        open={isFolderAccessOpen}
+        onOpenChange={setIsFolderAccessOpen}
+        onBooksAdded={handleBooksAdded}
+      />
+
+      {/* Upload Dialog (for individual files) */}
       <UploadDialog
         open={isUploadOpen}
         onOpenChange={setIsUploadOpen}

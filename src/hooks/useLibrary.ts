@@ -69,6 +69,13 @@ export function useLibrary() {
     return { success: newBooks.length, failed };
   }, []);
 
+  // Add pre-built audiobook objects directly (for file handle approach)
+  const addPrebuiltBooks = useCallback((newBooks: Audiobook[]) => {
+    if (newBooks.length > 0) {
+      setBooks(prev => [...newBooks, ...prev]);
+    }
+  }, []);
+
   // Progress callback type
   type ProgressCallback = (current: number, total: number, bookName: string) => void;
 
@@ -245,6 +252,7 @@ export function useLibrary() {
     filterBy,
     setFilterBy,
     addBooks,
+    addPrebuiltBooks,
     addBooksFromFolders,
     updateBookStatus,
     updateBookProgress,
