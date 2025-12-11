@@ -70,7 +70,7 @@ export function Header({ onScanFolder, onUploadFiles }: HeaderProps) {
             <IOSInstallGuide open={showIOSGuide} onOpenChange={setShowIOSGuide} />
             <AndroidInstallGuide open={showAndroidGuide} onOpenChange={setShowAndroidGuide} />
             
-            {/* Primary action - Scan Folder */}
+            {/* Primary action - Access Folder */}
             <Button
               variant="default"
               size="sm"
@@ -78,7 +78,7 @@ export function Header({ onScanFolder, onUploadFiles }: HeaderProps) {
               className="gap-2"
             >
               <FolderOpen className="h-4 w-4" />
-              <span className="hidden sm:inline">Scan Folder</span>
+              <span className="hidden sm:inline">Add Books</span>
             </Button>
             
             {/* Secondary action - Upload Files */}
