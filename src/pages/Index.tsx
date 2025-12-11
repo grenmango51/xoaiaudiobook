@@ -10,6 +10,7 @@ import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { Audiobook } from '@/types/audiobook';
 import { toast } from '@/hooks/use-toast';
 import { getAudioFile, createAudioUrl, revokeAudioUrl } from '@/utils/audioStorage';
+import type { ScannedBook } from '@/utils/folderScanner';
 
 const Index = () => {
   const {
@@ -23,6 +24,7 @@ const Index = () => {
     filterBy,
     setFilterBy,
     addBooks,
+    addBooksFromFolders,
     stats,
     updateBookProgress,
     addBookmark,
@@ -210,6 +212,25 @@ const Index = () => {
     }
   }, [addBooks]);
 
+  const handleFolderImport = useCallback(async (scannedBooks: ScannedBook[]) => {
+    toast({
+      title: 'Importing...',
+      description: `Processing ${scannedBooks.length} audiobook${scannedBooks.length !== 1 ? 's' : ''}.`,
+    });
+    
+    try {
+      const result = await addBooksFromFolders(scannedBooks);
+      toast({
+        title: result.failed === 0 ? 'Import complete!' : 'Partial import',
+        description: `Added ${result.success} book${result.success !== 1 ? 's' : ''}${result.failed > 0 ? `, ${result.failed} failed` : ''}.`,
+        variant: result.failed > 0 ? 'destructive' : 'default',
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({ title: 'Import failed', variant: 'destructive' });
+    }
+  }, [addBooksFromFolders]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Hidden audio element for playback */}
@@ -236,6 +257,7 @@ const Index = () => {
         open={isUploadOpen}
         onOpenChange={setIsUploadOpen}
         onUpload={handleUploadFiles}
+        onFolderImport={handleFolderImport}
       />
 
       {/* Mini Player */}

@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Audiobook, BookStatus, Bookmark } from '@/types/audiobook';
 import { sampleBooks } from '@/data/sampleBooks';
-import { createAudiobookFromFile } from '@/utils/audioUtils';
+import { createAudiobookFromFile, createAudiobookFromFolder } from '@/utils/audioUtils';
 import { deleteAudioFile } from '@/utils/audioStorage';
 import { saveLibrary, loadLibrary, isFirstInstall, markInitialized } from '@/utils/libraryStorage';
+import type { ScannedBook } from '@/utils/folderScanner';
 
 export type SortOption = 'title' | 'author' | 'dateAdded' | 'duration' | 'dateFinished' | 'recentlyPlayed';
 export type FilterOption = 'all' | 'new' | 'started' | 'finished';
@@ -57,6 +58,28 @@ export function useLibrary() {
         newBooks.push(book);
       } catch (error) {
         console.error('Failed to process file:', file.name, error);
+        failed++;
+      }
+    }
+    
+    if (newBooks.length > 0) {
+      setBooks(prev => [...newBooks, ...prev]);
+    }
+    
+    return { success: newBooks.length, failed };
+  }, []);
+
+  // Import books from scanned folders (Smart Audiobook Player style)
+  const addBooksFromFolders = useCallback(async (scannedBooks: ScannedBook[]): Promise<{ success: number; failed: number }> => {
+    const newBooks: Audiobook[] = [];
+    let failed = 0;
+    
+    for (const scannedBook of scannedBooks) {
+      try {
+        const book = await createAudiobookFromFolder(scannedBook.folderName, scannedBook.files);
+        newBooks.push(book);
+      } catch (error) {
+        console.error('Failed to import folder:', scannedBook.folderName, error);
         failed++;
       }
     }
@@ -210,6 +233,7 @@ export function useLibrary() {
     filterBy,
     setFilterBy,
     addBooks,
+    addBooksFromFolders,
     updateBookStatus,
     updateBookProgress,
     addBookmark,
