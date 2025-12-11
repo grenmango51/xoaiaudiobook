@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Music, X, FileAudio, FolderOpen, Loader2 } from 'lucide-react';
+import { Upload, Music, X, FileAudio, FolderOpen, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
+import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import { 
   scanFolderForAudiobooks, 
@@ -23,8 +24,14 @@ interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpload: (files: File[]) => void;
-  onFolderImport?: (books: ScannedBook[]) => void;
+  onFolderImport?: (books: ScannedBook[], onProgress?: (current: number, total: number, name: string) => void) => Promise<{ success: number; failed: number }>;
   defaultTab?: 'folder' | 'files';
+}
+
+interface ImportProgress {
+  current: number;
+  total: number;
+  currentName: string;
 }
 
 export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, defaultTab = 'folder' }: UploadDialogProps) {
@@ -37,6 +44,11 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
   const [scanning, setScanning] = useState(false);
   const [scannedBooks, setScannedBooks] = useState<ScannedBook[]>([]);
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
+  
+  // Import progress state
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
 
   const acceptedTypes = '.mp3,.m4a,.m4b,.ogg,.wav,.opus';
   const supportsAPI = supportsDirectoryPicker();
@@ -45,6 +57,9 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
   useEffect(() => {
     if (open) {
       setActiveTab(defaultTab);
+      // Reset states when opening
+      setImportResult(null);
+      setImportProgress(null);
     }
   }, [open, defaultTab]);
 
@@ -102,6 +117,7 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
   // Folder scanning functions
   const handleScanFolder = useCallback(async () => {
     setScanning(true);
+    setImportResult(null);
     
     try {
       const result = await scanFolderForAudiobooks();
@@ -125,6 +141,7 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
     input.onchange = () => {
       if (input.files && input.files.length > 0) {
         setScanning(true);
+        setImportResult(null);
         const files = Array.from(input.files);
         const books = groupFilesByFolder(files);
         setScannedBooks(books);
@@ -156,22 +173,53 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
     }
   }, [selectedBooks.size, scannedBooks]);
 
-  const handleFolderImport = useCallback(() => {
-    if (onFolderImport) {
-      const booksToImport = scannedBooks.filter(b => selectedBooks.has(b.folderName));
-      onFolderImport(booksToImport);
+  const handleFolderImport = useCallback(async () => {
+    if (!onFolderImport) return;
+    
+    const booksToImport = scannedBooks.filter(b => selectedBooks.has(b.folderName));
+    if (booksToImport.length === 0) return;
+    
+    setImporting(true);
+    setImportProgress({ current: 0, total: booksToImport.length, currentName: booksToImport[0].folderName });
+    
+    try {
+      const result = await onFolderImport(booksToImport, (current, total, name) => {
+        setImportProgress({ current, total, currentName: name });
+      });
+      
+      setImportResult(result);
+      
+      // Auto-close on success after a short delay
+      if (result.failed === 0) {
+        setTimeout(() => {
+          setScannedBooks([]);
+          setSelectedBooks(new Set());
+          setImportProgress(null);
+          setImportResult(null);
+          onOpenChange(false);
+        }, 1500);
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      setImportResult({ success: 0, failed: booksToImport.length });
+    } finally {
+      setImporting(false);
     }
-    setScannedBooks([]);
-    setSelectedBooks(new Set());
-    onOpenChange(false);
   }, [scannedBooks, selectedBooks, onFolderImport, onOpenChange]);
 
   const handleClose = useCallback(() => {
+    if (importing) return; // Prevent closing during import
     setSelectedFiles([]);
     setScannedBooks([]);
     setSelectedBooks(new Set());
+    setImportProgress(null);
+    setImportResult(null);
     onOpenChange(false);
-  }, [onOpenChange]);
+  }, [onOpenChange, importing]);
+
+  const progressPercent = importProgress 
+    ? (importProgress.current / importProgress.total) * 100 
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -185,11 +233,11 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="folder" className="gap-2">
+            <TabsTrigger value="folder" className="gap-2" disabled={importing}>
               <FolderOpen className="h-4 w-4" />
               Scan Folder
             </TabsTrigger>
-            <TabsTrigger value="files" className="gap-2">
+            <TabsTrigger value="files" className="gap-2" disabled={importing}>
               <FileAudio className="h-4 w-4" />
               Select Files
             </TabsTrigger>
@@ -197,7 +245,73 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
 
           {/* Folder Scan Tab */}
           <TabsContent value="folder" className="space-y-4 mt-4">
-            {scannedBooks.length === 0 ? (
+            {/* Import Progress View */}
+            {(importing || importResult) && (
+              <div className="space-y-4">
+                {importing && importProgress && (
+                  <>
+                    <div className="text-center py-4">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-2" />
+                      <p className="font-medium">Importing audiobooks...</p>
+                      <p className="text-sm text-muted-foreground mt-1 truncate px-4">
+                        {importProgress.currentName}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Progress value={progressPercent} className="h-2" />
+                      <p className="text-xs text-muted-foreground text-center">
+                        {importProgress.current} of {importProgress.total} books processed
+                      </p>
+                    </div>
+
+                    {/* Individual book progress list */}
+                    <ScrollArea className="h-[150px] rounded-md border p-2">
+                      <div className="space-y-1">
+                        {scannedBooks
+                          .filter(b => selectedBooks.has(b.folderName))
+                          .map((book, index) => (
+                            <div
+                              key={book.folderName}
+                              className={cn(
+                                'flex items-center gap-2 p-2 rounded text-sm',
+                                index < importProgress.current && 'text-green-500',
+                                index === importProgress.current && 'bg-primary/10 text-primary font-medium',
+                                index > importProgress.current && 'text-muted-foreground'
+                              )}
+                            >
+                              {index < importProgress.current && (
+                                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                              )}
+                              {index === importProgress.current && (
+                                <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+                              )}
+                              {index > importProgress.current && (
+                                <div className="h-4 w-4 flex-shrink-0" />
+                              )}
+                              <span className="truncate">{book.folderName}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </ScrollArea>
+                  </>
+                )}
+
+                {importResult && !importing && (
+                  <div className="text-center py-6">
+                    <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                    <p className="font-medium text-lg">Import Complete!</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {importResult.success} book{importResult.success !== 1 ? 's' : ''} added
+                      {importResult.failed > 0 && `, ${importResult.failed} failed`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Normal scan view */}
+            {!importing && !importResult && scannedBooks.length === 0 && (
               <div className="space-y-4">
                 <Button 
                   onClick={supportsAPI ? handleScanFolder : handleFallbackFolderInput}
@@ -235,7 +349,10 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, def
                   </code>
                 </div>
               </div>
-            ) : (
+            )}
+            
+            {/* Book selection view */}
+            {!importing && !importResult && scannedBooks.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">

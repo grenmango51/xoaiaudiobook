@@ -223,22 +223,27 @@ const Index = () => {
     }
   }, [addBooks]);
 
-  const handleFolderImport = useCallback(async (scannedBooks: ScannedBook[]) => {
-    toast({
-      title: 'Importing...',
-      description: `Processing ${scannedBooks.length} audiobook${scannedBooks.length !== 1 ? 's' : ''}.`,
-    });
-    
+  const handleFolderImport = useCallback(async (
+    scannedBooks: ScannedBook[], 
+    onProgress?: (current: number, total: number, name: string) => void
+  ): Promise<{ success: number; failed: number }> => {
     try {
-      const result = await addBooksFromFolders(scannedBooks);
-      toast({
-        title: result.failed === 0 ? 'Import complete!' : 'Partial import',
-        description: `Added ${result.success} book${result.success !== 1 ? 's' : ''}${result.failed > 0 ? `, ${result.failed} failed` : ''}.`,
-        variant: result.failed > 0 ? 'destructive' : 'default',
-      });
+      const result = await addBooksFromFolders(scannedBooks, onProgress);
+      
+      // Only show toast for errors since dialog shows success
+      if (result.failed > 0) {
+        toast({
+          title: 'Some imports failed',
+          description: `${result.failed} book${result.failed !== 1 ? 's' : ''} could not be imported.`,
+          variant: 'destructive',
+        });
+      }
+      
+      return result;
     } catch (error) {
       console.error('Import error:', error);
       toast({ title: 'Import failed', variant: 'destructive' });
+      return { success: 0, failed: scannedBooks.length };
     }
   }, [addBooksFromFolders]);
 
