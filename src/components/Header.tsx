@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Headphones, Settings, Upload, Download, FolderOpen } from 'lucide-react';
+import { Headphones, Settings, Upload, Download, FolderOpen, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { IOSInstallGuide } from './IOSInstallGuide';
@@ -9,9 +9,11 @@ import { toast } from 'sonner';
 interface HeaderProps {
   onScanFolder: () => void;
   onUploadFiles: () => void;
+  onOpenSync?: () => void;
+  isSyncConnected?: boolean;
 }
 
-export function Header({ onScanFolder, onUploadFiles }: HeaderProps) {
+export function Header({ onScanFolder, onUploadFiles, onOpenSync, isSyncConnected }: HeaderProps) {
   const { isInstallable, isIOS, isAndroid, promptAvailable, installApp } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showAndroidGuide, setShowAndroidGuide] = useState(false);
@@ -91,6 +93,19 @@ export function Header({ onScanFolder, onUploadFiles }: HeaderProps) {
               <Upload className="h-4 w-4" />
               <span className="hidden sm:inline">Files</span>
             </Button>
+            
+            {/* Sync button */}
+            {onOpenSync && (
+              <Button
+                variant={isSyncConnected ? "default" : "ghost"}
+                size="icon"
+                onClick={onOpenSync}
+                className={isSyncConnected ? "bg-green-600 hover:bg-green-700" : ""}
+                title={isSyncConnected ? "Sync connected" : "Set up sync"}
+              >
+                <RefreshCw className={`h-5 w-5 ${isSyncConnected ? "text-white" : ""}`} />
+              </Button>
+            )}
             
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />

@@ -102,7 +102,7 @@ export async function scanFolderForAudiobooks(): Promise<ScanResult | null> {
   try {
     const dirHandle = await window.showDirectoryPicker({
       mode: 'read',
-    });
+    }) as unknown as FSDirectoryHandle;
     
     const bookMap = await scanDirectory(dirHandle, '');
     
