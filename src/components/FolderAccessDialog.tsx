@@ -123,7 +123,7 @@ export function FolderAccessDialog({ open, onOpenChange, onBooksAdded }: FolderA
       setProgress({ current: i + 1, total: selectedFolders.length, bookName: folder.name });
 
       try {
-        const bookId = `handle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const bookId = `handle-${crypto.randomUUID()}`;
         
         // Store just the handle reference (not the file data!)
         await storeDirectoryHandle(bookId, folder.handle, folder.fileNames);

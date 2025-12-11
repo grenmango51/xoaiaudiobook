@@ -94,7 +94,7 @@ export function generateCoverUrl(title: string): string {
 export async function createAudiobookFromFile(file: File): Promise<Audiobook> {
   const duration = await getAudioDuration(file);
   const { title, author } = parseFileName(file.name);
-  const id = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const id = `upload-${crypto.randomUUID()}`;
   
   // Store the audio file in IndexedDB for persistent offline access
   try {
@@ -127,7 +127,7 @@ export async function createAudiobookFromFile(file: File): Promise<Audiobook> {
 // Create an audiobook from a folder (multiple files = chapters)
 // Similar to Smart Audiobook Player approach
 export async function createAudiobookFromFolder(folderName: string, files: File[]): Promise<Audiobook> {
-  const id = `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const id = `folder-${crypto.randomUUID()}`;
   
   // Calculate total duration and create chapters
   let totalDuration = 0;
