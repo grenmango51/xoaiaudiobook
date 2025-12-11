@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Music, X, FileAudio, FolderOpen, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -24,12 +24,13 @@ interface UploadDialogProps {
   onOpenChange: (open: boolean) => void;
   onUpload: (files: File[]) => void;
   onFolderImport?: (books: ScannedBook[]) => void;
+  defaultTab?: 'folder' | 'files';
 }
 
-export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport }: UploadDialogProps) {
+export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport, defaultTab = 'folder' }: UploadDialogProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('folder');
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Folder scan state
@@ -39,6 +40,13 @@ export function UploadDialog({ open, onOpenChange, onUpload, onFolderImport }: U
 
   const acceptedTypes = '.mp3,.m4a,.m4b,.ogg,.wav,.opus';
   const supportsAPI = supportsDirectoryPicker();
+
+  // Sync activeTab with defaultTab when dialog opens
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultTab);
+    }
+  }, [open, defaultTab]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

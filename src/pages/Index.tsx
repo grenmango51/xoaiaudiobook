@@ -48,9 +48,20 @@ const Index = () => {
   } = useAudioPlayer();
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadTab, setUploadTab] = useState<'folder' | 'files'>('folder');
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const currentAudioUrlRef = useRef<string | null>(null);
+
+  const handleOpenScanFolder = useCallback(() => {
+    setUploadTab('folder');
+    setIsUploadOpen(true);
+  }, []);
+
+  const handleOpenUploadFiles = useCallback(() => {
+    setUploadTab('files');
+    setIsUploadOpen(true);
+  }, []);
 
   // Handle audio element initialization
   const handleAudioInit = useCallback((audio: HTMLAudioElement) => {
@@ -236,7 +247,7 @@ const Index = () => {
       {/* Hidden audio element for playback */}
       <AudioElement onInit={handleAudioInit} />
 
-      <Header onUpload={() => setIsUploadOpen(true)} />
+      <Header onScanFolder={handleOpenScanFolder} onUploadFiles={handleOpenUploadFiles} />
       
       <Library
         books={books}
@@ -258,6 +269,7 @@ const Index = () => {
         onOpenChange={setIsUploadOpen}
         onUpload={handleUploadFiles}
         onFolderImport={handleFolderImport}
+        defaultTab={uploadTab}
       />
 
       {/* Mini Player */}
