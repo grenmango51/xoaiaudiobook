@@ -69,12 +69,21 @@ export function useLibrary() {
     return { success: newBooks.length, failed };
   }, []);
 
+  // Progress callback type
+  type ProgressCallback = (current: number, total: number, bookName: string) => void;
+
   // Import books from scanned folders (Smart Audiobook Player style)
-  const addBooksFromFolders = useCallback(async (scannedBooks: ScannedBook[]): Promise<{ success: number; failed: number }> => {
+  const addBooksFromFolders = useCallback(async (
+    scannedBooks: ScannedBook[],
+    onProgress?: ProgressCallback
+  ): Promise<{ success: number; failed: number }> => {
     const newBooks: Audiobook[] = [];
     let failed = 0;
     
-    for (const scannedBook of scannedBooks) {
+    for (let i = 0; i < scannedBooks.length; i++) {
+      const scannedBook = scannedBooks[i];
+      onProgress?.(i, scannedBooks.length, scannedBook.folderName);
+      
       try {
         const book = await createAudiobookFromFolder(scannedBook.folderName, scannedBook.files);
         newBooks.push(book);
@@ -83,6 +92,9 @@ export function useLibrary() {
         failed++;
       }
     }
+    
+    // Final progress call
+    onProgress?.(scannedBooks.length, scannedBooks.length, '');
     
     if (newBooks.length > 0) {
       setBooks(prev => [...newBooks, ...prev]);
