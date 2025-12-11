@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Headphones, Settings, Upload, Download } from 'lucide-react';
+import { Headphones, Settings, Upload, Download, FolderOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { IOSInstallGuide } from './IOSInstallGuide';
@@ -7,10 +7,11 @@ import { AndroidInstallGuide } from './AndroidInstallGuide';
 import { toast } from 'sonner';
 
 interface HeaderProps {
-  onUpload: () => void;
+  onScanFolder: () => void;
+  onUploadFiles: () => void;
 }
 
-export function Header({ onUpload }: HeaderProps) {
+export function Header({ onScanFolder, onUploadFiles }: HeaderProps) {
   const { isInstallable, isIOS, isAndroid, promptAvailable, installApp } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showAndroidGuide, setShowAndroidGuide] = useState(false);
@@ -27,14 +28,11 @@ export function Header({ onUpload }: HeaderProps) {
         toast.success('App installed! Find it on your home screen.');
       } else if (result === 'dismissed') {
         toast.info('Installation cancelled. Tap Install App to try again.');
-        // Show manual instructions since prompt won't be available again
         setShowAndroidGuide(true);
       } else {
-        // Prompt not available, show manual instructions
         setShowAndroidGuide(true);
       }
     } else if (isAndroid) {
-      // No automatic prompt available, show manual instructions
       setShowAndroidGuide(true);
     }
   };
@@ -71,15 +69,29 @@ export function Header({ onUpload }: HeaderProps) {
             )}
             <IOSInstallGuide open={showIOSGuide} onOpenChange={setShowIOSGuide} />
             <AndroidInstallGuide open={showAndroidGuide} onOpenChange={setShowAndroidGuide} />
+            
+            {/* Primary action - Scan Folder */}
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onScanFolder}
+              className="gap-2"
+            >
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Scan Folder</span>
+            </Button>
+            
+            {/* Secondary action - Upload Files */}
             <Button
               variant="outline"
               size="sm"
-              onClick={onUpload}
+              onClick={onUploadFiles}
               className="gap-2"
             >
               <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Add Books</span>
+              <span className="hidden sm:inline">Files</span>
             </Button>
+            
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
             </Button>
