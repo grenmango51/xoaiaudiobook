@@ -97,7 +97,7 @@ export function SyncDialog({
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground mb-2">Your sync code</p>
               <div className="flex items-center gap-2">
-                <code className="text-2xl font-mono font-bold tracking-widest flex-1">
+                <code className="text-xs font-mono font-bold tracking-tight flex-1 break-all">
                   {syncCode}
                 </code>
                 <Button
@@ -110,7 +110,7 @@ export function SyncDialog({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Enter this code on your other devices to link them
+                Copy this code and paste it on your other devices to link them
               </p>
             </div>
 
@@ -182,7 +182,7 @@ export function SyncDialog({
         ) : mode === 'create' ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Generate a unique 6-character code that you'll enter on your other devices.
+              Generate a secure sync code that you'll copy to your other devices.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setMode('menu')}>
@@ -196,13 +196,12 @@ export function SyncDialog({
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Enter sync code</label>
+              <label className="text-sm font-medium">Paste sync code</label>
               <Input
                 value={inputCode}
-                onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                placeholder="ABC123"
-                maxLength={6}
-                className="text-center text-xl font-mono tracking-widest"
+                onChange={(e) => setInputCode(e.target.value.toLowerCase())}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className="text-xs font-mono"
               />
             </div>
             <div className="flex gap-2">
@@ -212,7 +211,7 @@ export function SyncDialog({
               <Button 
                 onClick={handleJoin} 
                 className="flex-1"
-                disabled={inputCode.length !== 6}
+                disabled={inputCode.length < 36}
               >
                 Connect
               </Button>
