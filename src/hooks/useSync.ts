@@ -6,14 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 const SYNC_CODE_KEY = 'audiobook-sync-code';
 const DEVICE_ID_KEY = 'audiobook-device-id';
 
-// Generate a random 6-character sync code
+// Generate a secure UUID-based sync code (much harder to guess than 6 chars)
 function generateSyncCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude similar chars
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  return crypto.randomUUID();
 }
 
 // Generate a unique device ID
@@ -81,12 +76,14 @@ export function useSync() {
 
   // Join with an existing sync code
   const joinWithCode = useCallback(async (code: string) => {
-    const normalizedCode = code.toUpperCase().trim();
+    const normalizedCode = code.toLowerCase().trim();
     
-    if (normalizedCode.length !== 6) {
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(normalizedCode)) {
       toast({
         title: 'Invalid code',
-        description: 'Sync code must be 6 characters',
+        description: 'Please enter a valid sync code',
         variant: 'destructive',
       });
       return false;
