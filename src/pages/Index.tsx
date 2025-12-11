@@ -5,9 +5,11 @@ import { NowPlaying } from '@/components/NowPlaying';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { UploadDialog } from '@/components/UploadDialog';
 import { FolderAccessDialog } from '@/components/FolderAccessDialog';
+import { SyncDialog } from '@/components/SyncDialog';
 import { AudioElement } from '@/components/AudioElement';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+import { useSync } from '@/hooks/useSync';
 import { Audiobook } from '@/types/audiobook';
 import { toast } from '@/hooks/use-toast';
 import { getAudioFile, createAudioUrl, revokeAudioUrl } from '@/utils/audioStorage';
@@ -50,10 +52,24 @@ const Index = () => {
     getCurrentTime,
   } = useAudioPlayer();
 
+  const {
+    syncCode,
+    isConnected: isSyncConnected,
+    isSyncing,
+    lastSynced,
+    createSyncCode,
+    joinWithCode,
+    disconnect: disconnectSync,
+    pushLibrary,
+    pullLibrary,
+    syncProgress,
+  } = useSync();
+
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isFolderAccessOpen, setIsFolderAccessOpen] = useState(false);
   const [uploadTab, setUploadTab] = useState<'folder' | 'files'>('folder');
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
+  const [isSyncOpen, setIsSyncOpen] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const currentAudioUrlRef = useRef<string | null>(null);
 
@@ -65,6 +81,32 @@ const Index = () => {
     setUploadTab('files');
     setIsUploadOpen(true);
   }, []);
+
+  const handleOpenSync = useCallback(() => {
+    setIsSyncOpen(true);
+  }, []);
+
+  const handlePushSync = useCallback(() => {
+    pushLibrary(books);
+  }, [pushLibrary, books]);
+
+  const handlePullSync = useCallback(async () => {
+    const cloudBooks = await pullLibrary();
+    if (cloudBooks) {
+      toast({
+        title: 'Library synced',
+        description: `Found ${cloudBooks.length} book(s) in cloud. Progress and bookmarks updated.`,
+      });
+      // TODO: Merge cloud data with local library
+    }
+  }, [pullLibrary]);
+
+  // Sync progress when book updates
+  useEffect(() => {
+    if (currentBook && isSyncConnected) {
+      syncProgress(currentBook);
+    }
+  }, [currentBook?.currentPosition, currentBook?.status, isSyncConnected, syncProgress]);
 
   // Handle audio element initialization
   const handleAudioInit = useCallback((audio: HTMLAudioElement) => {
@@ -288,7 +330,12 @@ const Index = () => {
       {/* Hidden audio element for playback */}
       <AudioElement onInit={handleAudioInit} />
 
-      <Header onScanFolder={handleOpenScanFolder} onUploadFiles={handleOpenUploadFiles} />
+      <Header 
+        onScanFolder={handleOpenScanFolder} 
+        onUploadFiles={handleOpenUploadFiles}
+        onOpenSync={handleOpenSync}
+        isSyncConnected={isSyncConnected}
+      />
       
       <Library
         books={books}
@@ -318,6 +365,21 @@ const Index = () => {
         onUpload={handleUploadFiles}
         onFolderImport={handleFolderImport}
         defaultTab={uploadTab}
+      />
+
+      {/* Sync Dialog */}
+      <SyncDialog
+        open={isSyncOpen}
+        onOpenChange={setIsSyncOpen}
+        syncCode={syncCode}
+        isConnected={isSyncConnected}
+        isSyncing={isSyncing}
+        lastSynced={lastSynced}
+        onCreateCode={createSyncCode}
+        onJoinCode={joinWithCode}
+        onDisconnect={disconnectSync}
+        onPush={handlePushSync}
+        onPull={handlePullSync}
       />
 
       {/* Mini Player */}
