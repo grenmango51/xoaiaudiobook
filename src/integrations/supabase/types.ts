@@ -124,7 +124,69 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_sync_code_exists: {
+        Args: { p_sync_code: string }
+        Returns: boolean
+      }
+      get_sync_bookmarks: {
+        Args: { p_sync_code: string }
+        Returns: {
+          book_id: string
+          bookmark_id: string
+          created_at: string | null
+          id: string
+          note: string | null
+          position: number
+          sync_code: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sync_bookmarks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_sync_devices: {
+        Args: { p_sync_code: string }
+        Returns: {
+          created_at: string
+          device_name: string | null
+          id: string
+          last_seen: string | null
+          sync_code: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sync_devices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_sync_library: {
+        Args: { p_sync_code: string }
+        Returns: {
+          author: string | null
+          book_id: string
+          cover_url: string | null
+          current_position: number | null
+          date_added: string | null
+          date_finished: string | null
+          duration: number | null
+          id: string
+          last_played: string | null
+          playback_speed: number | null
+          status: string | null
+          sync_code: string
+          title: string
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "sync_library"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       [_ in never]: never

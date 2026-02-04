@@ -90,14 +90,13 @@ export function useSync() {
     }
 
     try {
-      // Check if code exists
-      const { data: existing } = await supabase
-        .from('sync_devices')
-        .select('id')
-        .eq('sync_code', normalizedCode)
-        .limit(1);
+      // Check if code exists using secure RPC function (prevents enumeration)
+      const { data: exists, error: checkError } = await supabase
+        .rpc('check_sync_code_exists', { p_sync_code: normalizedCode });
 
-      if (!existing || existing.length === 0) {
+      if (checkError) throw checkError;
+
+      if (!exists) {
         toast({
           title: 'Code not found',
           description: 'No devices are using this sync code yet',
